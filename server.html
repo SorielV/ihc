@@ -1,0 +1,120 @@
+<html>
+	<head>
+		<meta charset=utf-8>
+		<title>Server</title>
+		<style>
+      html {
+        width: 100%;
+        height: 100%;
+      }
+			body { 
+        width: 100%;
+        height: 100%;
+        margin: 0;
+      }
+			canvas { 
+        width: 100%;
+        height: 100%;
+      }
+		</style>
+	</head>
+	<body>
+    <script src="/socket.io/socket.io.js"></script>
+    <!--treejs-->
+    <script src="https://threejs.org/build/three.min.js"></script>
+    <script>
+      'use strict';
+      function createFloor () {
+        const floor = {
+          width: 19,
+          height: 1,
+          depth: 19
+        }
+
+        const mesh = new THREE.Mesh(
+          new THREE.BoxGeometry(1,1,1),
+          new THREE.MeshPhongMaterial({color:0xff4444, wireframe: false})
+        );
+        mesh.position.y += 1
+        // The cube can have shadows cast onto it, and it can cast shadows
+        mesh.receiveShadow = true
+        mesh.castShadow = true
+        scene.add(mesh)
+        
+        const meshFloor = new THREE.Mesh(
+          new THREE.PlaneGeometry(10,10, 10,10),
+          // MeshBasicMaterial does not react to lighting, so we replace with MeshPhongMaterial
+          new THREE.MeshPhongMaterial({color:0xffffff, wireframe: false})
+          // See threejs.org/examples/ for other material types
+        );
+        meshFloor.rotation.x -= Math.PI / 2
+        // Floor can have shadows cast onto it
+        meshFloor.receiveShadow = true
+        scene.add(meshFloor)
+      }
+
+      const scene = new THREE.Scene(); // Set Scene
+      scene.background = new THREE.Color(255, 255, 255) // Set Background
+			const camera = new THREE.PerspectiveCamera(90, window.innerWidth/window.innerHeight, 0.1, 1000);
+      const renderer = new THREE.WebGLRenderer();
+      scene.add(createFloor())
+			renderer.setSize(window.innerWidth, window.innerHeight);
+			document.body.appendChild(renderer.domElement);
+
+      const geometry = new THREE.BoxGeometry(1.5, 1.5, 1.5);
+      geometry.computeBoundingSphere();
+			const material = new THREE.MeshBasicMaterial({ color: 0xff00ff });
+			const cube = new THREE.Mesh(geometry, material);
+      scene.add(cube);
+      
+      camera.position.z = 20;
+      camera.position.x = 0;
+
+      console.log(cube)
+    </script>
+    <script>
+      const socket = io('http://localhost:8080?server=true');
+
+      // Create Room
+      function startRoom() {
+        socket.emit('new-room', { 
+          name: "Room de prueba",
+          isPublic: true
+        })
+      }
+
+      // Server Message
+      socket.on('message', function (message) {
+        console.log(message)
+        if (message.data) 
+          console.log(message.data.roomId)
+      })
+
+      let vel = 0.2
+      socket.on('move-shape', function (move) {
+         switch (parseInt(move.moveType)) {
+           case 0:
+              cube.position.y += vel
+            break
+           case 1:
+              cube.position.x += vel
+            break
+           case 2:
+              cube.position.y -= vel
+            break
+           case 3:
+              cube.position.x -= vel
+            break
+         }
+         console.log(move)
+      })
+
+      const fixUpdate = function () {
+        requestAnimationFrame(fixUpdate)
+				renderer.render(scene,camera)
+			}
+			fixUpdate()
+    </script>
+	</body>
+</html>
+<!--socket.io-->

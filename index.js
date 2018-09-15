@@ -5,15 +5,70 @@ const port = process.env.PORT || 8080
 
 server.listen(port)
 
-app.get('/', (req, res) => {
-  res.sendFile(__dirname + '/index.html')
-})
+const clients = [], rooms = []
 
 io.on('connection', function (socket) {
-  socket.emit('news', { hello: 'world' })
-  socket.on('my other event', function (data) {
-    console.log(data)
-  })
+  const roomId = socket.handshake.query.roomId || socket.id
+  socket.send(`Bienvenido ${socket.handshake.query.server ? 'Servidor' : 'Cliente' } C:`)
+
+  if (socket.handshake.query.server) {
+    socket.join('server-' + socket.id)
+
+    socket
+      .on('new-room', function (room) {
+        if(typeof room === 'object') {
+          rooms.push({ nama: room.name, isPublic: room.isPublic || false, host: roomId })
+          socket.join('server-' + roomId)
+          socket.send({
+            status: 200,
+            data: {
+              action: 'new-room',
+              message: "Room creaado",
+              roomId
+            }
+          })
+        } else {
+          socket.send({
+            status: 400,
+            data: {
+              action: 'new-room',
+              message: "Informacion incompleta",
+            }
+          })
+        }
+      })
+  } else {
+    if (!io.sockets.adapter.rooms['server-' + roomId]) {
+      socket.send('Error :v')
+    } else {
+      socket.join('server-' + roomId)
+      socket.send({
+        status: 200,
+        data: {
+          room: 'server-' + roomId,
+          action: 'join-server',
+          message: "Conectado a sevidor",
+        }
+      })
+
+      socket
+        .on('move', function (shape) { // { shape [String], typeMove [Integer[0-4]] }
+          io.to(roomId).emit('move-shape', shape) // Send to Serer
+        })
+    }
+  }
 })
 
-console.log('Server Running in Port: ' + port)
+app.get('/client', (req, res) => {
+  res.sendFile(__dirname + '/client.html')
+})
+
+app.get('/api/servers', (req, res) => {
+  console.log(rooms)
+  res.status(200).json({ data: rooms.filter(room => room.isPublic )}).end()
+})
+
+
+app.get('/server', (req, res) => {
+  res.sendFile(__dirname + '/server.html')
+})
