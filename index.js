@@ -1,4 +1,6 @@
-const app = require('express')()
+const express = require('express')
+const path = require('path')
+const app = express()
 const server = require('http').Server(app)
 const io = require('socket.io')(server)
 const port = process.env.PORT || 8080
@@ -23,7 +25,7 @@ io.on('connection', function (socket) {
             status: 200,
             data: {
               action: 'new-room',
-              message: "Room creaado",
+              message: 'Room creaado',
               roomId
             }
           })
@@ -32,7 +34,7 @@ io.on('connection', function (socket) {
             status: 400,
             data: {
               action: 'new-room',
-              message: "Informacion incompleta",
+              message: 'Informacion incompleta',
             }
           })
         }
@@ -47,7 +49,7 @@ io.on('connection', function (socket) {
         data: {
           room: 'server-' + roomId,
           action: 'join-server',
-          message: "Conectado a sevidor",
+          message: 'Conectado a sevidor',
         }
       })
 
@@ -59,16 +61,19 @@ io.on('connection', function (socket) {
   }
 })
 
-app.get('/client', (req, res) => {
-  res.sendFile(__dirname + '/client.html')
-})
+app.use(express.static(path.join(__dirname, 'static')))
 
-app.get('/api/servers', (req, res) => {
-  console.log(rooms)
-  res.status(200).json({ data: rooms.filter(room => room.isPublic )}).end()
-})
-
-
-app.get('/server', (req, res) => {
-  res.sendFile(__dirname + '/server.html')
-})
+app
+  .get('/', (req, res) => {
+    res.sendFile(__dirname + '/dsp.html')
+  })
+  .get('/client', (req, res) => {
+    res.sendFile(__dirname + '/client.html')
+  })
+  .get('/api/servers', (req, res) => {
+    console.log(rooms)
+    res.status(200).json({ data: rooms.filter(room => room.isPublic )}).end()
+  })
+  .get('/server', (req, res) => {
+    res.sendFile(__dirname + '/server.html')
+  })

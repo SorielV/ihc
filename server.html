@@ -24,7 +24,7 @@
     <script src="https://threejs.org/build/three.min.js"></script>
     <script>
       'use strict';
-      function createFloor () {
+      /*function createFloor () {
         const floor = {
           width: 19,
           height: 1,
@@ -51,13 +51,23 @@
         // Floor can have shadows cast onto it
         meshFloor.receiveShadow = true
         scene.add(meshFloor)
+      }*/
+
+      function generatePlane () {
+        const geometry = new THREE.PlaneGeometry(20, 20, 20)
+        const material = new THREE.MeshBasicMaterial({color: 0x000000, side: THREE.DoubleSide})
+        const plane = new THREE.Mesh(geometry, material)
+        plane.rotation.x -= Math.PI / 2
+        return plane
       }
 
+
       const scene = new THREE.Scene(); // Set Scene
-      scene.background = new THREE.Color(255, 255, 255) // Set Background
+      const plane = generatePlane()
 			const camera = new THREE.PerspectiveCamera(90, window.innerWidth/window.innerHeight, 0.1, 1000);
       const renderer = new THREE.WebGLRenderer();
-      scene.add(createFloor())
+      scene.background = new THREE.Color(255, 255, 255) // Set Background
+      scene.add(plane)
 			renderer.setSize(window.innerWidth, window.innerHeight);
 			document.body.appendChild(renderer.domElement);
 
@@ -67,21 +77,65 @@
 			const cube = new THREE.Mesh(geometry, material);
       scene.add(cube);
       
-      camera.position.z = 20;
-      camera.position.x = 0;
+      camera.position.z = 10;
+      camera.position.x = 1;
+      camera.position.y = 0.5;
+
+      function zoomCamera (deltaY) {
+        if (deltaY < 0) {
+          camera.position.z -= vel;
+        } else {
+          camera.position.z += vel;
+        }
+      }
+
+      function moveCamera (key) {
+        console.log(key)
+        switch (key) {
+          case 'a':
+            camera.position.x += vel;
+            break
+          case 'd':
+            camera.position.x -= vel;
+            break
+          case 'w':
+            camera.position.y += vel;
+            break
+          case 's':
+            camera.position.y -= vel;
+            break
+          case 'f':
+            cube.position.x -= vel;
+            break
+          case 'h':
+            cube.position.x += vel;
+            break
+          case 't':
+            cube.position.y += vel;
+            break
+          case 'g':
+            cube.position.y -= vel;
+            break
+        }
+      }
+      
+      window.onwheel = function(ev) {
+        zoomCamera(ev.deltaY)
+      }
+
+      window.onkeyup = function(ev) {
+        moveCamera(ev.key)
+      }
 
       console.log(cube)
     </script>
     <script>
-      const socket = io('http://localhost:8080?server=true');
+      const socket = io('http://localhost:8080?server=true')
 
-      // Create Room
-      function startRoom() {
-        socket.emit('new-room', { 
-          name: "Room de prueba",
-          isPublic: true
-        })
-      }
+      socket.emit('new-room', { 
+        name: "Room de prueba",
+        isPublic: true
+      })
 
       // Server Message
       socket.on('message', function (message) {
